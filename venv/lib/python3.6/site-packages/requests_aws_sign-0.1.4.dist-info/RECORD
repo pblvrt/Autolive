@@ -1,0 +1,11 @@
+requests_aws_sign/__init__.py,sha256=rKkYAovpWGQq3U5iMg0x0LBsD-7mC6ypZpfeGFPxp_M,66
+requests_aws_sign/requests_aws_sign.py,sha256=5YB3FMUElbROT8AhGe9xalmZ2u9vzKrj9R9SIkIDa7Q,1150
+requests_aws_sign-0.1.4.dist-info/DESCRIPTION.rst,sha256=OCTuuN6LcWulhHS3d5rfjdsQtW22n7HENFRh6jC6ego,10
+requests_aws_sign-0.1.4.dist-info/METADATA,sha256=1FRvemI1oNxSX8U-v95ZYQ8XokcrDSA55Ykcmgix0bs,938
+requests_aws_sign-0.1.4.dist-info/RECORD,,
+requests_aws_sign-0.1.4.dist-info/WHEEL,sha256=o2k-Qa-RMNIJmUdIc7KU6VWR_ErNRbWNlxDIpl7lm34,110
+requests_aws_sign-0.1.4.dist-info/metadata.json,sha256=Fw0MFbjpykSaapqQ5D5vWR5fct0ctUYHJkqcVYFJXVE,1071
+requests_aws_sign-0.1.4.dist-info/top_level.txt,sha256=U7mLJSHLgL_HJFTKOW4qX0JxOtqKHRUYaiTXgDsYiU8,18
+requests_aws_sign-0.1.4.dist-info/INSTALLER,sha256=zuuue4knoyJ-UwPPXg8fezS7VCrXJQrAP7zeNuwvFQg,4
+requests_aws_sign/__pycache__/requests_aws_sign.cpython-36.pyc,,
+requests_aws_sign/__pycache__/__init__.cpython-36.pyc,,
