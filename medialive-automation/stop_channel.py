@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import sys
 from models import Channel_settings
 from config import Config
@@ -26,6 +27,6 @@ except:
 channel = Channel_settings(input_key, data['channel_id'], data['medialive_id'],
           data['user_id'], data['name'], data['fps'], data['input_bitrate'],
           data['input_resolution'], status, config.medialive, config.dynamodb)
-          
+
 print("stopping channel")
 channel.stop_medialive_channel()
