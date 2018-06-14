@@ -40,8 +40,8 @@ class Channel_settings:
         self.init_settings()
 
     def log(self, status, message):
-        with open('/var/log/nginx/medialive.log', 'w') as f:
-            print(str(time.time()*1000) + ': ' + status + ' ' + message, file=f)
+        with open('/var/log/nginx/medialive.log', 'a') as f:
+            print(self.channel_id + ': ' + status + ' ' + message, file=f)
 
         item = {'logs': {
                     'Message': message,
@@ -438,6 +438,9 @@ class Channel_settings:
             print("Channel is stopping. Exiting ...")
             sys.exit(0)
 
+        get_input_id = self.medialive.describe_channel(ChannelId=self.medialive_id)
+        input_id = get_input_id['InputAttachments']['InputId']
+
         stop_channel = self.medialive.stop_channel(ChannelId=self.medialive_id)
         channel_status = self.status
         while channel_status != "IDLE":
@@ -463,7 +466,7 @@ class Channel_settings:
                 channel_status = "DELETED"
                 self.log("FAILED", "Stopping channel failed: stop_channel()")
                 print("Something went wrong when stopping. Exiting ...")
-        remove_input = self.medialive.delete_input(InputId= self.input_id)
+        remove_input = self.medialive.delete_input(InputId=input_id)
         self.log("DELETED", "Channel has been deleted succesfully")
         print('channel has been deleted')
         sys.exit(0)
