@@ -1,3 +1,4 @@
+#!/usr/local/bin/python3.6
 import sys
 from models import Channel_settings
 from config import Config
@@ -31,7 +32,10 @@ if status == "CREATING":
     print("Channel is being created. Exiting ...")
     sys.exit(0)
 
-print(status)
+if status == "STOPPING":
+    print("Channel is being stopped. Exiting ...")
+    sys.exit(0)
+
 channel = Channel_settings(input_key, data['channel_id'], data['medialive_id'],
           data['user_id'], data['name'], data['fps'], data['input_bitrate'],
           data['input_resolution'], status, config.medialive, config.dynamodb)

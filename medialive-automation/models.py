@@ -16,7 +16,7 @@ class Channel_settings:
         self.medialive_id = medialive_id
         self.channel_id = channel_id
         self.user_id = user_id
-        self.input_id = input_id
+        self.input_id = None
         self.channel_name = channel_name
         self.fps = int(fps)
         self.input_resolution = input_resolution
@@ -40,6 +40,9 @@ class Channel_settings:
         self.init_settings()
 
     def log(self, status, message):
+        with open('/log/nginx/medialive.log', 'w') as f:
+            print(time.time()*1000 + ': ' + status + ' ' + message, file=f)
+
         item = {'logs': {
                     'Message': message,
                     'Status': status,
@@ -270,7 +273,6 @@ class Channel_settings:
         return result
 
     def create_medialive_input(self, rtmp_url, input_sec_group):
-        print(self.status)
         try:
             create_input = self.medialive.create_input(
                 InputSecurityGroups=[ input_sec_group ], Name= self.channel_id + "_main_pull",
@@ -279,11 +281,8 @@ class Channel_settings:
             )
             self.input_id = create_input['Input']['Id']
             self.log("CREATING", "Channel input created")
-            print("Channel input created: Input ID: " + self.input_id)
         except Exception as e:
             self.log("FAILED", "Channel creation failed: create_input()")
-            print("Channel input creation failed: " + e)
-            print("Exiting")
             sys.exit(0)
 
     def create_medialive_channel(self, output, record, arn):
@@ -397,10 +396,9 @@ class Channel_settings:
                 UpdateExpression="SET medialive_id = :val1",
                 ExpressionAttributeValues={":val1": self.medialive_id}
             )
-            print('Channel created succesfully')
+
         except Exception as e:
             self.log("FAILED", "Medialive Channel creation failed: create_channel()")
-            print('Creating channel failed: ' + e + ' Exiting ...')
             self.stop_medialive_channel()
             sys.exit(0)
 
