@@ -41,7 +41,7 @@ class Channel_settings:
 
     def log(self, status, message):
         with open('/var/log/nginx/medialive.log', 'w') as f:
-            print(time.time()*1000 + ': ' + status + ' ' + message, file=f)
+            print(str(time.time()*1000) + ': ' + status + ' ' + message, file=f)
 
         item = {'logs': {
                     'Message': message,

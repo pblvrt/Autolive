@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3.6
+#!/usr/bin/python3
 import sys
 from models import Channel_settings
 from config import Config
