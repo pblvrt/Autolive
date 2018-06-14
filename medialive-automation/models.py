@@ -439,8 +439,8 @@ class Channel_settings:
             sys.exit(0)
 
         get_input_id = self.medialive.describe_channel(ChannelId=self.medialive_id)
-        input_id = get_input_id['InputAttachments']['InputId']
-
+        input_id = get_input_id['InputAttachments'][0]['InputId']
+        print(input_id)
         stop_channel = self.medialive.stop_channel(ChannelId=self.medialive_id)
         channel_status = self.status
         while channel_status != "IDLE":
