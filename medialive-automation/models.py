@@ -40,7 +40,7 @@ class Channel_settings:
         self.init_settings()
 
     def log(self, status, message):
-        with open('/log/nginx/medialive.log', 'w') as f:
+        with open('/var/log/nginx/medialive.log', 'w') as f:
             print(time.time()*1000 + ': ' + status + ' ' + message, file=f)
 
         item = {'logs': {
