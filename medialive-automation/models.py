@@ -1,6 +1,7 @@
 from datetime import datetime
 import random, string, os, json, time, decimal, sys
 from collections import OrderedDict
+import os
 
 class Channel_settings:
     def __init__(self, streamkey, channel_id, medialive_id, user_id, channel_name, \
@@ -40,7 +41,7 @@ class Channel_settings:
         self.init_settings()
 
     def log(self, status, message):
-        with open('/home/pablov/Nextcloud/Code/Livestream_Platfrom/Streaming_server/Streaming_Server_V4.0/medialive_automation.log', 'a') as f:
+        with open(os.path.abspath('../medialive_automation.log'), 'a') as f:
             print(self.channel_id + ': ' + status + ' ' + message, file=f)
 
         item = {'logs': {
