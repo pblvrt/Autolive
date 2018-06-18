@@ -3,12 +3,12 @@ import boto3, requests, json
 import os, time, sys
 
 class Config:
-    def __init__(self, input_key):
-        self.input_key = input_key
+    def __init__(self, streamkey):
+        self.streamkey = streamkey
         self.rtmp_url = None
-        self.livestream_output = "s3://livestream-outputs/"
-        self.livestream_record = "s3://livestream-outputs/"
-        self.input_sec_group = '973333'
+        self.livestream_output = os.environ['S3_BUCKET']
+        self.livestream_record = os.environ['S3_BUCKET']
+        self.input_sec_group = os.environ['INPUT_SEC_GROUP']
         self.channel_prefix = 'channel/'
         self.logs_prefix = 'logs/'
         self.arn = os.environ['ARN']
@@ -35,7 +35,7 @@ class Config:
         response = self.dynamodb.scan(
             ScanFilter={
                 'streamkey': {
-                'AttributeValueList': [self.input_key],
+                'AttributeValueList': [self.streamkey],
                 'ComparisonOperator': 'EQ'}})
         try:
             self.channel_id = response['Items'][0]['channel_id']

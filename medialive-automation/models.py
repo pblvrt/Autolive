@@ -40,7 +40,7 @@ class Channel_settings:
         self.init_settings()
 
     def log(self, status, message):
-        with open('/var/log/nginx/medialive.log', 'a') as f:
+        with open('/home/pablov/Nextcloud/Code/Livestream_Platfrom/Streaming_server/Streaming_Server_V4.0/medialive_automation.log', 'a') as f:
             print(self.channel_id + ': ' + status + ' ' + message, file=f)
 
         item = {'logs': {
@@ -434,9 +434,6 @@ class Channel_settings:
         print('channel is RUNNING')
 
     def stop_medialive_channel(self):
-        if self.status == "STOPPING":
-            print("Channel is stopping. Exiting ...")
-            sys.exit(0)
 
         get_input_id = self.medialive.describe_channel(ChannelId=self.medialive_id)
         input_id = get_input_id['InputAttachments'][0]['InputId']

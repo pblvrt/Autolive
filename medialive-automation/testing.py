@@ -5,13 +5,13 @@ from config import Config
 
 ''' Get input streamkey '''
 try:
-    input_key=sys.argv[1]
+    streamkey=sys.argv[1]
 except:
     print("please provide streamkey")
     sys.exit(0)
 
 ''' init config, channel '''
-config = Config(input_key)
+config = Config(streamkey)
 data = config.load_data()
 
 print(data)
