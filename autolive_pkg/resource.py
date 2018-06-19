@@ -1,11 +1,12 @@
 from datetime import datetime
 import random, string, os, json, time, decimal, sys
 from collections import OrderedDict
+import os
 
 class Channel_settings:
     def __init__(self, streamkey, channel_id, medialive_id, user_id, channel_name, \
                 fps, input_bitrate, input_resolution, status, \
-                medialive, dynamodb):
+                medialive, dynamodb, log):
         ''' Set output video and audio resolutions depending on input VIDEO
         resolution specified.
         Set the bitrate for each output depending on input bitrate specified.
@@ -25,6 +26,7 @@ class Channel_settings:
         self.status = status
         self.medialive = medialive
         self.dynamodb = dynamodb
+        self.log = log
         self.video_1 = None
         self.video_2 = None
         self.video_3 = None
@@ -38,41 +40,6 @@ class Channel_settings:
         self.bitrate_3 = None
         self.bitrate_4 = None
         self.init_settings()
-
-    def log(self, status, message):
-        with open('/var/log/nginx/medialive.log', 'a') as f:
-            print(self.channel_id + ': ' + status + ' ' + message, file=f)
-
-        item = {'logs': {
-                    'Message': message,
-                    'Status': status,
-                    'Source': 'NGINX',
-                    'Pipleine': 'Main'
-                    },
-                }
-        self.status=status
-        try:
-            response = self.dynamodb.update_item(
-                Key = {'channel_id': self.channel_id,
-                       'user_id': self.user_id},
-                UpdateExpression='SET logs.#k1 = :logs',
-                ExpressionAttributeNames= {'#k1': str(time.time()*1000)},
-                ExpressionAttributeValues={':logs': item['logs']})
-            return response
-
-        except Exception as e:
-            print(e)
-            if e.response['Error']['Code'] == 'ValidationException':
-                response = self.dynamodb.update_item(
-                    Key = {'channel_id': self.channel_id,
-                           'user_id': self.user_id},
-                    UpdateExpression='SET #attr = :logs',
-                    ExpressionAttributeNames={'#attr': 'logs'},
-                    ExpressionAttributeValues={
-                    ':logs':{
-                        str(time.time()*1000): item['logs']}}
-                )
-            return response
 
     def get_item(self):
         item = {
@@ -99,7 +66,6 @@ class Channel_settings:
             self.audio_2 = "Audio_high_2"
             self.audio_3 = "Audio_low_1"
             self.audio_4 = "Audio_low_2"
-
         if self.input_resolution == "720":
             self.video_1 = "720_1"
             self.video_2 = "720_2"
@@ -109,31 +75,26 @@ class Channel_settings:
             self.audio_2 = "Audio_high_2"
             self.audio_3 = "Audio_low_1"
             self.audio_4 = "Audio_low_2"
-
         if self.input_bitrate == "1000":
             self.bitrate_1 = "1000"
             self.bitrate_2 = "1000"
             self.bitrate_3 = "750"
             self.bitrate_4 = "500"
-
         if self.input_bitrate == "2000":
             self.bitrate_1 = "2000"
             self.bitrate_2 = "1500"
             self.bitrate_3 = "1000"
             self.bitrate_4 = "750"
-
         if self.input_bitrate == "3000":
             self.bitrate_1 = "3000"
             self.bitrate_2 = "2000"
             self.bitrate_3 = "1500"
             self.bitrate_4 = "750"
-
         if self.input_bitrate == "4000":
             self.bitrate_1 = "4000"
             self.bitrate_2 = "3000"
             self.bitrate_3 = "1500"
             self.bitrate_4 = "750"
-
         if self.input_bitrate == "5000":
             self.bitrate_1 = "5000"
             self.bitrate_2 = "3500"
@@ -280,9 +241,9 @@ class Channel_settings:
                 Type="RTMP_PULL"
             )
             self.input_id = create_input['Input']['Id']
-            self.log("CREATING", "Channel input created")
+            self.log.log("CREATING", "Channel input created")
         except Exception as e:
-            self.log("FAILED", "Channel creation failed: create_input()")
+            self.log.log("FAILED", "Channel creation failed: create_input()")
             sys.exit(0)
 
     def create_medialive_channel(self, output, record, arn):
@@ -388,7 +349,7 @@ class Channel_settings:
                 RoleArn=arn,
                 )
             channel_Arn = create_channel['Channel']['Arn']
-            self.log("CREATING", "Medialive Channel created succesfully")
+            self.log.log("CREATING", "Medialive Channel created succesfully")
             self.medialive_id = channel_Arn[49:]
             put_medialive_id = self.dynamodb.update_item(
                 Key={'channel_id': self.channel_id,
@@ -396,14 +357,13 @@ class Channel_settings:
                 UpdateExpression="SET medialive_id = :val1",
                 ExpressionAttributeValues={":val1": self.medialive_id}
             )
-
         except Exception as e:
-            self.log("FAILED", "Medialive Channel creation failed: create_channel()")
+            self.log.log("FAILED", "Medialive Channel creation failed: create_channel()")
             self.stop_medialive_channel()
             sys.exit(0)
 
     def start_medialive_channel(self):
-        describe_channel = self.medialive.describe_channel(ChannelId=self.medialive_id)
+        describe_channel = self.medialive.describe_channel(ChannelId=self.medialive_id) #wait for channel to be created
         channel_status = describe_channel['State']
         while channel_status != "IDLE":
             time.sleep(15)
@@ -411,37 +371,27 @@ class Channel_settings:
                 describe_channel = self.medialive.describe_channel(ChannelId=self.medialive_id)
                 channel_status = describe_channel['State']
             except Exception as e:
-                print("Something went wrong at startup. Exiting ...")
                 channel_status = "IDLE"
-                self.log("FAILED", "Channel startup failed: start_channel()")
+                self.log.log("FAILED", "Channel startup failed: start_channel()")
                 self.stop_medialive_channel()
-        self.log("CREATING", "Channel is IDLE and starting up")
-        print('channel is IDLE and starting up')
-
-        start_channel = self.medialive.start_channel(ChannelId=self.medialive_id)
+        self.log.log("CREATING", "Channel is IDLE and starting up")
+        start_channel = self.medialive.start_channel(ChannelId=self.medialive_id) #start up medialive channel
         while channel_status != "RUNNING":
             time.sleep(15)
             try:
                 describe_channel = self.medialive.describe_channel(ChannelId=self.medialive_id)
                 channel_status = describe_channel['State']
             except Exception as e:
-                print("Something went wrong at startup. Exiting ...")
                 channel_status = "IDLE"
-                self.log("FAILED", "Channel startup failed: start_channel()")
+                self.log.log("FAILED", "Channel startup failed: start_channel()")
                 self.stop_medialive_channel()
-
-        self.log("RUNNING", "Channel is running")
-        print('channel is RUNNING')
+        self.log.log("RUNNING", "Channel is running")
 
     def stop_medialive_channel(self):
-        if self.status == "STOPPING":
-            print("Channel is stopping. Exiting ...")
-            sys.exit(0)
-
-        get_input_id = self.medialive.describe_channel(ChannelId=self.medialive_id)
+        """ Stop medialive channel then delete medialive channel and delete channel input"""
+        get_input_id = self.medialive.describe_channel(ChannelId=self.medialive_id) #get input id
         input_id = get_input_id['InputAttachments'][0]['InputId']
-        print(input_id)
-        stop_channel = self.medialive.stop_channel(ChannelId=self.medialive_id)
+        stop_channel = self.medialive.stop_channel(ChannelId=self.medialive_id) #call stop channel
         channel_status = self.status
         while channel_status != "IDLE":
             time.sleep(15)
@@ -450,12 +400,9 @@ class Channel_settings:
                 channel_status = describe_channel['State']
             except Exception as e:
                 channel_status = "IDLE"
-                self.log("FAILED", "Stopping channel failed: stop_channel()")
-                print("Something went wrong when stopping. Exiting ...")
-        self.log("STOPPING", "Channel is stopping")
-        print('channel is stopping')
-
-        delete_channel = self.medialive.delete_channel(ChannelId=self.medialive_id)
+                self.log.log("FAILED", "Stopping channel failed: stop_channel()")
+        self.log.log("STOPPING", "Channel has been stopped")
+        delete_channel = self.medialive.delete_channel(ChannelId=self.medialive_id) #call delete channel
         channel_status = self.status
         while channel_status != "DELETED":
             time.sleep(15)
@@ -464,9 +411,6 @@ class Channel_settings:
                 channel_status = describe_channel['State']
             except Exception as e:
                 channel_status = "DELETED"
-                self.log("FAILED", "Stopping channel failed: stop_channel()")
-                print("Something went wrong when stopping. Exiting ...")
-        remove_input = self.medialive.delete_input(InputId=input_id)
-        self.log("DELETED", "Channel has been deleted succesfully")
-        print('channel has been deleted')
-        sys.exit(0)
+                self.log.log("FAILED", "Stopping channel failed: stop_channel()")
+        remove_input = self.medialive.delete_input(InputId=input_id) #call remove input
+        self.log.log("DELETED", "Channel has been deleted succesfully")
