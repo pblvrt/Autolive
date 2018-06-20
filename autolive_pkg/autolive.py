@@ -3,7 +3,7 @@ from config import Config
 from resource import Channel_settings
 from logger import Logger
 # cli.py
-import click
+from optparse import OptionParser
 import sys
 
 def create_channel(channel, status, config, log):
@@ -64,13 +64,6 @@ def  stop_channel(channel, status, config, log):
     print("stopping channel")
     channel.stop_medialive_channel()
 
-@click.command()
-@click.argument('streamkey')
-@click.option(
-    '--action', '-a',
-    help='Action to be performed on medialive channel, options: create, delete',
-)
-
 def main(streamkey, action):
     ''' init config, channel '''
     config = Config(streamkey)
@@ -101,4 +94,14 @@ def main(streamkey, action):
         log.logs('ERROR', 'Wrong action specified')
 
 if __name__ == "__main__":
-    main()
+    parser = OptionParser()
+
+    parser.add_option(
+        "-s", "--streamkey", dest="streamkey",
+        help="Streamkey of Medialive channel")
+
+    parser.add_option("-a", "--action", dest="action", help="function to call")
+
+    (options, args) = parser.parse_args(sys.argv)
+
+    main(options.streamkey, options.action)
