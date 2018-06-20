@@ -3,7 +3,7 @@ from config import Config
 from resource import Channel_settings
 from logger import Logger
 # cli.py
-import click
+from optparse import OptionParser
 import sys
 
 def create_channel(channel, status, config, log):
@@ -61,19 +61,12 @@ def  stop_channel(channel, status, config, log):
     if status == "STOPPING":
         log.log('ERROR', 'Channel is being stopped. Exiting ...')
         sys.exit(0)
-    print("stopping channel")
+    log.log('INFO', 'Channel is stopping ...')
     channel.stop_medialive_channel()
 
-@click.command()
-@click.argument('streamkey')
-@click.option(
-    '--action', '-a',
-    help='Action to be performed on medialive channel, options: create, delete',
-)
-
-def main(streamkey, action):
+def main(streamkey, action, application):
     ''' init config, channel '''
-    config = Config(streamkey)
+    config = Config(streamkey, application)
     data = config.load_data()
     log = Logger(data['channel_id'], data['user_id'], config.dynamodb)
     # from channel logs load last status if empty load empty
@@ -101,4 +94,17 @@ def main(streamkey, action):
         log.logs('ERROR', 'Wrong action specified')
 
 if __name__ == "__main__":
-    main()
+    parser = OptionParser()
+
+    parser.add_option(
+        "-s", "--streamkey", dest="streamkey",
+        help="Streamkey of Medialive channel")
+
+    parser.add_option("-a", "--action", dest="action", help="Function to call")
+
+    parser.add_option("-A", "--application", dest="application", default='live',
+                      help="Define Nginx application for medialive input pull")
+
+    (options, args) = parser.parse_args(sys.argv)
+
+    main(options.streamkey, options.action, options.application)
