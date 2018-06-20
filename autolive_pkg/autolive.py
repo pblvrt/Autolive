@@ -64,9 +64,9 @@ def  stop_channel(channel, status, config, log):
     print("stopping channel")
     channel.stop_medialive_channel()
 
-def main(streamkey, action):
+def main(streamkey, action, application):
     ''' init config, channel '''
-    config = Config(streamkey)
+    config = Config(streamkey, application)
     data = config.load_data()
     log = Logger(data['channel_id'], data['user_id'], config.dynamodb)
     # from channel logs load last status if empty load empty
@@ -100,8 +100,11 @@ if __name__ == "__main__":
         "-s", "--streamkey", dest="streamkey",
         help="Streamkey of Medialive channel")
 
-    parser.add_option("-a", "--action", dest="action", help="function to call")
+    parser.add_option("-a", "--action", dest="action", help="Function to call")
+
+    parser.add_option("-A", "--application", dest="application", default='live',
+                      help="Define Nginx application for medialive input pull")
 
     (options, args) = parser.parse_args(sys.argv)
 
-    main(options.streamkey, options.action)
+    main(options.streamkey, options.action, options.application)
