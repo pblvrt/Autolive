@@ -61,7 +61,7 @@ def  stop_channel(channel, status, config, log):
     if status == "STOPPING":
         log.log('ERROR', 'Channel is being stopped. Exiting ...')
         sys.exit(0)
-    print("stopping channel")
+    log.log('INFO', 'Channel is stopping ...')
     channel.stop_medialive_channel()
 
 def main(streamkey, action, application):

@@ -12,7 +12,7 @@ class Config:
         self.channel_prefix = 'channel/'
         self.logs_prefix = 'logs/'
         self.arn = os.environ['ARN']
-        self.application = '/' + application
+        self.application = '/' + application + '/'
         self.medialive = boto3.client(
                 'medialive',
                 aws_access_key_id= os.environ['ACCESS'],
@@ -49,4 +49,4 @@ class Config:
     def load_public_ip(self):
         get_ip = requests.get('http://jsonip.com')
         json_ip = json.loads(get_ip.text)
-        self.rtmp_url = 'rtmp://' + json_ip['ip'] + self.application + self.streamkey
+        self.rtmp_url = 'rtmp://' + json_ip['ip'] + self.application +  self.streamkey
