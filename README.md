@@ -1,6 +1,6 @@
 # Autolive: AWS medialive automation
 
-The core idea of this proyect is to offload video transcoding from a NGNIX-RTMP server to AWS Medialive.
+The core idea of this proyect is to offload video transcoding from an NGNIX-RTMP server to AWS Medialive, replacing FFMPEG for transcoding and reducing server load from NGINX server.
 
 NGINX RTMP: https://github.com/arut/nginx-rtmp-module
 
@@ -8,21 +8,21 @@ NGINX RTMP: https://github.com/arut/nginx-rtmp-module
 
 1) Install Nginx with rtmp module.
 2) Git clone Autolive into preferred dir.
-3) Set details in conf.py.
+3) Set AWS details in conf.py.
 4) Simlink autolive to /usr/local/bin/autolive.
 5) Change nginx.conf to trigger autolive. (using nginx-rtmp exec options)
 
 ## AWS resources needed:
 
-1) DynamoDB table that defines channel details. (schema comming soon)
-2) s3 bucket for trancoding output files.
-3) CDN distribution. (optional)
+* DynamoDB table that defines channel details. (schema comming soon)
+* s3 bucket for AWS medalive outputs.
+* CDN distribution. (optional)
 
 ## CLI options:
 
-* '-s', '--streamkey' --> (string) |
-* '-a', '--action' --> (string) | Define what action to perform: 'create', 'delete'
-* '-A', '--application' --> (string) | manually define Nginx rtmp application, default 'live'
+* '-s', '--streamkey' --> (string) | Define streamkey. Streamkey should reference dynamodb table.
+* '-a', '--action' --> (string) | Define what action to perform: 'create', 'delete'.
+* '-A', '--application' --> (string) | manually define Nginx rtmp application, default 'live'.
        
 ## Notes:
 
