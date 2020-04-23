@@ -1,11 +1,12 @@
 import uuid
 import boto3
+import time
 from LadderGenerator import LadderGenerator
 
 
 class Channel:
     def __init__(self, stream_key, input_width, input_height, input_fps, input_bitrate, input_audio_bitrate):
-        self.channel_id = str(uuid.uuid4())
+
         self.input_stream_key = stream_key
         self.input_width = input_width
         self.input_height = input_height
@@ -15,9 +16,16 @@ class Channel:
         
         generator = LadderGenerator()
         self.ladder = generator.generate(self.input_width, self.input_bitrate, self.input_audio_bitrate, self.input_fps, [])
+        
         self.S3_output_bucket = 's3://medialivetests'
-  
-    def generateAudioDescriptions(self):
+        self.client = boto3.client('medialive')
+        
+        self.input_id = None
+        self.channel_id = None
+
+        
+        
+    def generate_audio_descriptions(self):
         audioDescriptions = []
         for item in self.ladder:
             description = {
@@ -42,7 +50,7 @@ class Channel:
 
         return audioDescriptions
     
-    def generateVideDescriptions(self):
+    def generate_vide_descriptions(self):
         videoDescriptions = []
         for item in self.ladder:
             description = {
@@ -87,7 +95,7 @@ class Channel:
             videoDescriptions.append(description)
         return videoDescriptions
       
-    def generateOutputgroupsOutputs(self):
+    def generate_output_groups_outputs(self):
         outputs = []
         for item in self.ladder:            
             result = {
@@ -120,13 +128,28 @@ class Channel:
         return outputs
     
     def create_channel(self):
-        client = boto3.client('medialive')
-        response = client.create_channel(
+        """
+            Create AWS Media live channel.
+            Requires an AWS Media live channel input to already be created so if input_id is None,
+            we will always call the create_channel_input() function to generate one.
+            This function depends on generate_audio_descriptions(), generate_vide_descriptions() and
+            generateOutputgroupsOutputs(), if any of these fails the creation of the channel will fail.
+        """
+        
+        if self.input_id == None:
+            self.create_channel_input()
+        
+        search = next((item for item in self.client.list_channels()['Channels'] if item["Name"] == self.input_stream_key), False)
+        if search:
+            self.channel_id = search['Id']
+            return
+        
+        response = self.client.create_channel(
             ChannelClass = 'SINGLE_PIPELINE',
             #An Amazon S3 bucket, serving as an origin server that a CDN such as Amazon CloudFront can pull from.
             Destinations = [
                 {
-                    'Id': self.channel_id + '-output',
+                    'Id': self.input_stream_key + '-output',
                     'Settings': [
                         {
                             'Url': self.S3_output_bucket + '/' + self.input_stream_key + '/' + self.input_stream_key + '-1'
@@ -135,8 +158,8 @@ class Channel:
                 },
             ],
             EncoderSettings = {
-                'AudioDescriptions': self.generateAudioDescriptions(),
-                'VideoDescriptions': self.generateVideDescriptions(),
+                'AudioDescriptions': self.generate_audio_descriptions(),
+                'VideoDescriptions': self.generate_vide_descriptions(),
                 'OutputGroups': [
                     {
                         'Name': "OutputGroup",
@@ -147,7 +170,7 @@ class Channel:
                                 'CodecSpecification': 'RFC_4281',
                                 'DirectoryStructure': 'SINGLE_DIRECTORY',
                                 'Destination': {
-                                    'DestinationRefId': self.channel_id + '-output'
+                                    'DestinationRefId': self.input_stream_key + '-output'
                                 },
                                 'HlsCdnSettings': {
                                     'HlsBasicPutSettings': {
@@ -175,7 +198,7 @@ class Channel:
                                 'TsFileMode': 'SEGMENTED_FILES'
                             },
                         },
-                        'Outputs': self.generateOutputgroupsOutputs()
+                        'Outputs': self.generate_output_groups_outputs()
                     }
                 ],
                 "TimecodeConfig": {
@@ -184,8 +207,8 @@ class Channel:
             },
             InputAttachments = [
                 {
-                    'InputAttachmentName': 'dev',
-                    'InputId': '3511215'         
+                    'InputAttachmentName': self.input_stream_key,
+                    'InputId': self.input_id         
                 }
             ],
             InputSpecification = {
@@ -194,16 +217,63 @@ class Channel:
                 'Resolution': 'HD'
             },
             LogLevel = 'ERROR',
-            Name = self.channel_id,
+            Name = self.input_stream_key,
             RoleArn = 'arn:aws:iam::707435100420:role/MediaLiveAccessRole'
         )
-        print(response)
+        self.channel_id = response['Id']
 
+    def create_channel_input(self):
+        search = next((item for item in self.client.list_inputs()['Inputs'] if item["Name"] == self.input_stream_key), False)
+        if search:
+            self.input_id = search['Id']
+            return
+        
+        response = self.client.create_input(
+            Destinations=[
+                {
+                    'StreamName': self.input_stream_key
+                },
+            ],
+            InputSecurityGroups=[
+                '1211590',
+            ],
+            Name=self.input_stream_key,
+            Type='RTMP_PUSH',
+        )
+        
+        self.input_id = response['Input']['Id']
+        status = response['Input']['State']
+        while status  == 'CREATING':
+            time.sleep(1)
+            status = self.client.describe_input(InputId=self.input_id)['State']
+        
+    
+    def start_channel(self):
+        return
+    
+    def delete_channel(self):
+        return
+    
+    def check_status(self):
+        if self.channel_id == None:
+            search = next((item for item in self.client.list_channels()['Channels'] if item["Name"] == self.input_stream_key), False)
+            if search:
+                self.channel_id = search['Id']
+            else:
+                print("This channel does not exist")
+                return            
+        response = self.client.describe_channel(
+                        ChannelId=self.channel_id
+                    )
+        return response['State']
+    
 """
 # Tests
-channel = Channel("test", 1080, 1920, 60, 7800, 192000)
+channel = Channel("5345346-345", 1080, 1920, 60, 7800, 192000)
 #print(channel.generateVideDescriptions())
 #print(channel.generateAudioDescriptions())
 #print(channel.generateOutputgroupsOutputs())
-channel.create_channel()
+#channel.create_channel_input()
+#channel.create_channel()
+channel.check_status()
 """
