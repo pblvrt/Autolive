@@ -3,7 +3,8 @@ import boto3
 import time
 import json
 import urllib
-from LadderGenerator import LadderGenerator
+
+from .ladder_generator import Ladder_generator
 
 
 class Channel:
@@ -17,7 +18,7 @@ class Channel:
         self.input_audio_bitrate = input_audio_bitrate
         self.input_type = input_type
         
-        generator = LadderGenerator()
+        generator = Ladder_generator()
         self.ladder = generator.generate(self.input_height, self.input_bitrate, self.input_audio_bitrate, self.input_fps, [])
         
         self.S3_output_bucket = 's3://medialivetests'
@@ -230,34 +231,42 @@ class Channel:
         if search:
             self.input_id = search['Id']
             return
-        
-        if self.input_type == 'Pull':
 
+        # Check server IP to create Sources URL and to create Sec. group for input.
+        getIp = urllib.request.urlopen('https://api.ipify.org?format=json').read()
+        ip = json.loads(getIp)['ip']        
+
+        if self.input_type == 'Pull':
             response = self.client.create_input(
-                Sources=[
-                    {
-                        'Url': self.stream_key/self.input_stream_key
-                    },
-                ],
-                InputSecurityGroups=[
-                    '1211590',
-                ],
-                Name=self.input_stream_key,
-                Type='RTMP_PULL',
-            )
+                            Sources=[
+                                {
+                                    'Url': "rtmp://{ip}/pool/{key}".format(ip=ip, key=self.input_stream_key)
+                                },
+                            ],
+                            Name=self.input_stream_key,
+                            Type='RTMP_PULL',
+                        )
+            print(response)
         else:
+            secGroupId = self.client.create_input_security_group(
+                        WhitelistRules=[
+                            {
+                                'Cidr': '{ip}/32'.format(ip=ip)
+                            },
+                        ]
+                    )['SecurityGroup']['Id']
             response = self.client.create_input(
-                Destinations=[
-                    {
-                        'StreamName': self.stream_key+'/'+self.input_stream_key
-                    },
-                ],
-                InputSecurityGroups=[
-                    '1211590',
-                ],
-                Name=self.input_stream_key,
-                Type='RTMP_PUSH',
-            )
+                            Destinations=[
+                                {
+                                    'StreamName': "{key}/{key}".format(key=self.input_stream_key)
+                                },
+                            ],
+                            InputSecurityGroups=[
+                                secGroupId
+                            ],
+                            Name=self.input_stream_key,
+                            Type='RTMP_PUSH',
+                        )
         
         self.input_id = response['Input']['Id']
         status = response['Input']['State']
@@ -283,13 +292,15 @@ class Channel:
                     )
         return response['State']
     
+
 """
 # Tests
-channel = Channel("5345346-345", 1080, 1920, 60, 7800, 192000)
+channel = Channel("5345346-345", 1080, 1920, 60, 7800, 192000, 'Push')
 #print(channel.generateVideDescriptions())
 #print(channel.generateAudioDescriptions())
 #print(channel.generateOutputgroupsOutputs())
 #channel.create_channel_input()
 #channel.create_channel()
-channel.check_status()
+#channel.check_status()
+channel.create_channel_input()
 """

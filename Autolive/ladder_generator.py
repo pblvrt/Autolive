@@ -1,5 +1,5 @@
 
-class LadderGenerator:
+class Ladder_generator:
     """
     def __init__(self, input_width, input_height, input_bitrate, input_fps):
         self.input_bitrate = input_bitrate
