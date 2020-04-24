@@ -1,11 +1,13 @@
 import uuid
 import boto3
 import time
+import json
+import urllib
 from LadderGenerator import LadderGenerator
 
 
 class Channel:
-    def __init__(self, stream_key, input_width, input_height, input_fps, input_bitrate, input_audio_bitrate):
+    def __init__(self, stream_key, input_width, input_height, input_fps, input_bitrate, input_audio_bitrate, input_type):
 
         self.input_stream_key = stream_key
         self.input_width = input_width
@@ -13,18 +15,18 @@ class Channel:
         self.input_bitrate = input_bitrate
         self.input_fps = input_fps
         self.input_audio_bitrate = input_audio_bitrate
+        self.input_type = input_type
         
         generator = LadderGenerator()
-        self.ladder = generator.generate(self.input_width, self.input_bitrate, self.input_audio_bitrate, self.input_fps, [])
+        self.ladder = generator.generate(self.input_height, self.input_bitrate, self.input_audio_bitrate, self.input_fps, [])
         
         self.S3_output_bucket = 's3://medialivetests'
         self.client = boto3.client('medialive')
         
         self.input_id = None
         self.channel_id = None
-
         
-        
+    
     def generate_audio_descriptions(self):
         audioDescriptions = []
         for item in self.ladder:
@@ -220,7 +222,8 @@ class Channel:
             Name = self.input_stream_key,
             RoleArn = 'arn:aws:iam::707435100420:role/MediaLiveAccessRole'
         )
-        self.channel_id = response['Id']
+        #print(json.dumps(response, indent=4, sort_keys=True))
+        self.channel_id = response['Channel']['Id']
 
     def create_channel_input(self):
         search = next((item for item in self.client.list_inputs()['Inputs'] if item["Name"] == self.input_stream_key), False)
@@ -228,26 +231,40 @@ class Channel:
             self.input_id = search['Id']
             return
         
-        response = self.client.create_input(
-            Destinations=[
-                {
-                    'StreamName': self.input_stream_key
-                },
-            ],
-            InputSecurityGroups=[
-                '1211590',
-            ],
-            Name=self.input_stream_key,
-            Type='RTMP_PUSH',
-        )
+        if self.input_type == 'Pull':
+
+            response = self.client.create_input(
+                Sources=[
+                    {
+                        'Url': self.stream_key/self.input_stream_key
+                    },
+                ],
+                InputSecurityGroups=[
+                    '1211590',
+                ],
+                Name=self.input_stream_key,
+                Type='RTMP_PULL',
+            )
+        else:
+            response = self.client.create_input(
+                Destinations=[
+                    {
+                        'StreamName': self.stream_key+'/'+self.input_stream_key
+                    },
+                ],
+                InputSecurityGroups=[
+                    '1211590',
+                ],
+                Name=self.input_stream_key,
+                Type='RTMP_PUSH',
+            )
         
         self.input_id = response['Input']['Id']
         status = response['Input']['State']
         while status  == 'CREATING':
             time.sleep(1)
             status = self.client.describe_input(InputId=self.input_id)['State']
-        
-    
+         
     def start_channel(self):
         return
     
@@ -260,8 +277,7 @@ class Channel:
             if search:
                 self.channel_id = search['Id']
             else:
-                print("This channel does not exist")
-                return            
+                return None  
         response = self.client.describe_channel(
                         ChannelId=self.channel_id
                     )

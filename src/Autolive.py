@@ -5,6 +5,7 @@ import sys
 import json
 
 from Channel import Channel
+from LadderGenerator import LadderGenerator
 
 # Logging configuration
 logging.basicConfig(filename='../debug/logs/app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
@@ -42,14 +43,21 @@ def debug(key, data):
         f.write("\n==============\n")
         f.write("Generating channel object...\n")
         channel = Channel(key, data['video_width'], data['video_height'], data['video_fps'],\
-                          data['video_bitrate'], data['audio_bitrate'])
-        print(channel.check_status())
-        
+                          data['video_bitrate'], data['audio_bitrate'], None)
+        f.write("Channel status is: {status}".format(status=channel.check_status()))
+        f.write("\nProposed video ladder is: \n================\n")
+        ladder = LadderGenerator()
+        f.write(json.dumps(ladder.generate(data['video_height'], data['video_bitrate'], \
+                                           data['video_fps'], data['audio_bitrate'], []),  indent=4, sort_keys=True))
+        f.write("\n==============\n")
+
     return
 
-def create_channel():
-    """ Create an AWS Medialive Channel """
-    channel = Channel('test', 1080, 1920, 60, 7800, 192000)
+def create_channel(key, data, inputType):
+    """ Create and start a AWS Medialive Channel """
+    data = extract_data(data)
+    channel = Channel(key, data['video_width'], data['video_height'], data['video_fps'],\
+                    data['video_bitrate'], data['audio_bitrate'], inputType)
     channel.create_channel()
     
 if __name__ == "__main__":
@@ -58,6 +66,7 @@ if __name__ == "__main__":
     parser.add_argument('--action', action='store', type=str, required=True, choices=['Create', 'Delete'])
     parser.add_argument('--key', type=str)
     parser.add_argument('--data', type=str)
+    parser.add_argument('--input', type=str, required=False, choices=['Pull', 'Push'])
     parser.add_argument('--debug', type=bool)
     args = parser.parse_args()
     
@@ -66,6 +75,8 @@ if __name__ == "__main__":
             parser.error("Action \"Create\" needs --data and --key flags. Check -h or --help for more info.")
         if args.debug:
             debug(args.key, args.data)
-    
+        if args.input != None:
+            inputType = "Pull"
+        create_channel(args.key, args.data, inputType)
     
     

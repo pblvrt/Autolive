@@ -2,3 +2,5 @@ venv
 **/__pycache__
 testing.py
 __pycache__
+channel_debug/*
+logs/*
